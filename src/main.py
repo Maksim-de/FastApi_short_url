@@ -21,17 +21,6 @@ import uvicorn
 from typing import Optional
 
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    redis = aioredis.from_url("redis://localhost")
-    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
-#     await create_db_and_tables()
-    yield
-
-
-#app = FastAPI(lifespan=lifespan)
-
 app = FastAPI()
 
 
