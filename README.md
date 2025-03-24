@@ -20,6 +20,7 @@
    - **PUT /links/{short_code}** - обновляет URL, удаляя старый short_code и заменяет его новым.
    - **GET /links/{short_code}/stats** - отображает оригинальный URL, дату создания, количество переходов и дату последнего использования.
    - **GET /links/search?original_url={url}** - осуществляет поиск ссылки по оригинальному URL
+   - **POST /delete_time** - удаляет ссылки, которые не использовались в течение day дней
 
 ### Регистрация
 Изменение и удаление ссылок доступны только зарегистрированным пользователям. Зарегистрированные пользователи могут удалять и изменять только свои ссылки. 
@@ -54,7 +55,7 @@
    ![image](https://github.com/user-attachments/assets/51f93e68-614c-4f09-af24-ccfd18ceb1ed)
 
 
-3. Получение статистики по ссылке
+2. Получение статистики по ссылке
    ```
    GET /links/{short_code}/stats
    ```
@@ -63,7 +64,7 @@
    ![image](https://github.com/user-attachments/assets/83389149-8f22-445c-9eef-d807bf8bda3f)
 
 
-5. Поиск ссылки по оригинальному URL
+3. Поиск ссылки по оригинальному URL
    ```
    GET /links/search/full_url
    {
@@ -71,6 +72,16 @@
    }
    ```
    ![image](https://github.com/user-attachments/assets/65e0f249-99ad-4190-bc0a-e6555e44929b)
+
+
+4. Удаление неиспользованных ссылок
+   ```
+   POST /links/delete_time
+   {
+       "day": "5",
+   }
+   ```
+![image](https://github.com/user-attachments/assets/1d08658f-8a35-4ec6-8130-a1a1cdb964be)
 
 ## Инструкция по запуску
 
