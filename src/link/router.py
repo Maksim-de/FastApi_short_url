@@ -24,11 +24,11 @@ from fastapi.responses import RedirectResponse
 from config import base_url
 
 
-
 router = APIRouter(prefix="/links", tags=["links"])
 
 cache = LRUCache(maxsize=32)  # Максимум 32 записей в кэше
 visit_counts = {}  # Отслеживаем количество посещений для каждого short_code
+
 
 # Создание кастомных ссылок (уникальный alias) + Указание времени жизни ссылки:
 @router.post("/shorten")
@@ -82,20 +82,22 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
         print(f"Ссылка {short_code} получена из кэша")
         if is_del == False and datetime.now() < expiration_date:
             statement = (
-                update(links).where(links.c.short_link == f"{base_url}/links/{short_code}").values(
-                        {
-                            links.c.number_of_click: number_of_click + 1,
-                            links.c.date_use: datetime.now(),
-                        }
-                    )
+                update(links)
+                .where(links.c.short_link == f"{base_url}/links/{short_code}")
+                .values(
+                    {
+                        links.c.number_of_click: number_of_click + 1,
+                        links.c.date_use: datetime.now(),
+                    }
                 )
+            )
             visit_counts[short_code] += 1
             await session.execute(statement)
             await session.commit()
             return RedirectResponse(url=full_link, status_code=302)
         else:
             return {"status": "link not available"}
-    else: 
+    else:
         try:
             query = select(
                 links.c.full_link,
@@ -105,36 +107,40 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
             ).where(links.c.short_link == f"{base_url}/links/{short_code}")
             result = await session.execute(query)
             full_link, is_del, number_of_click, expiration_date = result.first()
-            if (is_del == False) and (expiration_date is None or datetime.now() < expiration_date ):
+            if (is_del == False) and (expiration_date is None or datetime.now() < expiration_date):
                 statement = (
-                    update(links).where(
-                        links.c.short_link == f"{base_url}/links/{short_code}"
-                    )
+                    update(links)
+                    .where(links.c.short_link == f"{base_url}/links/{short_code}")
                     .values(
                         {
                             links.c.number_of_click: number_of_click + 1,
                             links.c.date_use: datetime.now(),
                         }
-                        )
                     )
+                )
                 if short_code in visit_counts:
                     visit_counts[short_code] += 1
                 else:
                     visit_counts[short_code] = 1
 
                 if visit_counts[short_code] > 5:
-                    cache[short_code] = (full_link, is_del, number_of_click, expiration_date)
+                    cache[short_code] = (
+                        full_link,
+                        is_del,
+                        number_of_click,
+                        expiration_date,
+                    )
                     print(f"Ссылка {short_code} добавлена в кэш")
 
                 await session.execute(statement)
                 await session.commit()
                 return RedirectResponse(url=full_link, status_code=302)
-            elif is_del == False and (expiration_date is None or datetime.now() > expiration_date):
+            elif is_del == False and (
+                expiration_date is None or datetime.now() > expiration_date
+            ):
                 statement = (
                     update(links)
-                    .where(
-                        links.c.short_link == f"{base_url}/links/{short_code}"
-                    )
+                    .where(links.c.short_link == f"{base_url}/links/{short_code}")
                     .values(is_deleted=True)
                 )
                 await session.execute(statement)
@@ -167,14 +173,12 @@ async def delete_link(
         if user.login == login:
             statement = (
                 update(links)
-                .where(
-                    links.c.short_link == f"{base_url}/links/{short_code}"
-                )
+                .where(links.c.short_link == f"{base_url}/links/{short_code}")
                 .values(is_deleted=True)
             )
             await session.execute(statement)
             await session.commit()
-            cache.pop(short_code, None) 
+            cache.pop(short_code, None)
             return {"status": "success", "is_deleted": "True"}
         else:
             return {"status": "this link was created by another user"}
