@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 import time
 from database import get_async_session
@@ -22,6 +22,7 @@ import uvicorn
 from typing import Optional
 from fastapi.responses import RedirectResponse
 from config import base_url
+from datetime import timedelta
 
 
 router = APIRouter(prefix="/links", tags=["links"])
@@ -107,7 +108,9 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
             ).where(links.c.short_link == f"{base_url}/links/{short_code}")
             result = await session.execute(query)
             full_link, is_del, number_of_click, expiration_date = result.first()
-            if (is_del == False) and (expiration_date is None or datetime.now() < expiration_date):
+            if (is_del == False) and (
+                expiration_date is None or datetime.now() < expiration_date
+            ):
                 statement = (
                     update(links)
                     .where(links.c.short_link == f"{base_url}/links/{short_code}")
@@ -276,3 +279,32 @@ async def search_link(url: str, session: AsyncSession = Depends(get_async_sessio
             return {"status": "link not found"}
     except:
         return {"status": "link not nooo found"}
+
+
+@router.post("/delete_time")
+async def delete_link(
+    day: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    if day > 0:
+        statement = (
+            update(links)  
+            .where(
+                links.c.date_use < func.now() - timedelta(days=day)
+            )  
+            .where(
+                links.c.is_deleted == False
+            )  
+            .values(is_deleted=True)
+        )
+
+        result = await session.execute(statement)
+        await session.commit()
+
+        return {
+            "status": "success",
+            "deleted_count": result.rowcount,
+        } 
+    else:
+        return {"status": "error, day < 0"}
