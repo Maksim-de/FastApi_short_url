@@ -13,10 +13,14 @@ DB_NAME = os.getenv("DB_NAME")
 
 DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_USER = os.getenv("SMTP_USER")
+import os
 
-SECRET = "SECRET"
+base_url = os.getenv("BASE_URL", "http://localhost:8000")
+
+# SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+# SMTP_USER = os.getenv("SMTP_USER")
+
+SECRET = os.getenv("SECRET")
 # import os, base64
 # print(base64.urlsafe_b64encode(os.urandom(32)).decode())
 

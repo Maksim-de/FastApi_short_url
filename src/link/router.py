@@ -7,13 +7,10 @@ from model.models import links
 from .schemas import link
 from pydantic import BaseModel
 from cachetools import TTLCache, LRUCache
-import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import List
 from fastapi.encoders import jsonable_encoder
-import sklearn
-import numpy as np
 from fastapi.responses import StreamingResponse
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -24,6 +21,8 @@ from datetime import datetime
 import uvicorn
 from typing import Optional
 from fastapi.responses import RedirectResponse
+from config import base_url
+
 
 
 router = APIRouter(prefix="/links", tags=["links"])
@@ -48,7 +47,7 @@ async def create_link(
     if user:
         l = link(
             full_link=full_link,
-            short_link=f"http://127.0.0.1:8000/links/{short_code}",
+            short_link=f"{base_url}/links/{short_code}",
             is_deleted=False,
             expiration_date=expires_at,
             login_user=user.email,
@@ -63,7 +62,7 @@ async def create_link(
     else:
         l = link(
             full_link=full_link,
-            short_link=f"http://127.0.0.1:8000/links/{short_code}",
+            short_link=f"{base_url}/links/{short_code}",
             is_deleted=False,
             expiration_date=expires_at,
         )
@@ -83,7 +82,7 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
         print(f"Ссылка {short_code} получена из кэша")
         if is_del == False and datetime.now() < expiration_date:
             statement = (
-                update(links).where(links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}").values(
+                update(links).where(links.c.short_link == f"{base_url}/links/{short_code}").values(
                         {
                             links.c.number_of_click: number_of_click + 1,
                             links.c.date_use: datetime.now(),
@@ -103,13 +102,13 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
                 links.c.is_deleted,
                 links.c.number_of_click,
                 links.c.expiration_date,
-            ).where(links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}")
+            ).where(links.c.short_link == f"{base_url}/links/{short_code}")
             result = await session.execute(query)
             full_link, is_del, number_of_click, expiration_date = result.first()
             if (is_del == False) and (expiration_date is None or datetime.now() < expiration_date ):
                 statement = (
                     update(links).where(
-                        links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}"
+                        links.c.short_link == f"{base_url}/links/{short_code}"
                     )
                     .values(
                         {
@@ -134,7 +133,7 @@ async def go_link(short_code: str, session: AsyncSession = Depends(get_async_ses
                 statement = (
                     update(links)
                     .where(
-                        links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}"
+                        links.c.short_link == f"{base_url}/links/{short_code}"
                     )
                     .values(is_deleted=True)
                 )
@@ -154,12 +153,12 @@ async def delete_link(
     user: User = Depends(current_active_user),
 ):
     is_deleted = select(links.c.is_deleted).where(
-        links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}"
+        links.c.short_link == f"{base_url}/links/{short_code}"
     )
     is_del = await session.execute(is_deleted)
 
     login = select(links.c.login_user).where(
-        links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}"
+        links.c.short_link == f"{base_url}/links/{short_code}"
     )
     login = await session.execute(is_deleted)
     login = login.first()
@@ -169,7 +168,7 @@ async def delete_link(
             statement = (
                 update(links)
                 .where(
-                    links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}"
+                    links.c.short_link == f"{base_url}/links/{short_code}"
                 )
                 .values(is_deleted=True)
             )
@@ -201,13 +200,13 @@ async def update_link(
             statement = (
                 update(links)
                 .where(links.c.short_link == short_url_now)
-                .values(short_link=f"http://127.0.0.1:8000/links/{new_short_code}")
+                .values(short_link=f"{base_url}/links/{new_short_code}")
             )
             await session.execute(statement)
             await session.commit()
             return {
                 "status": "success",
-                "new_link": f"http://127.0.0.1:8000/links/{new_short_code}",
+                "new_link": f"{base_url}/links/{new_short_code}",
             }
         else:
             return {"status": "this link was created by another user"}
@@ -228,7 +227,7 @@ async def statistic(
             links.c.number_of_click,
             links.c.date_use,
             links.c.is_deleted,
-        ).where(links.c.short_link == f"http://127.0.0.1:8000/links/{short_code}")
+        ).where(links.c.short_link == f"{base_url}/links/{short_code}")
         result = await session.execute(query)
         full_link, short_link, creation_date, number_of_click, date_use, is_deleted = (
             result.first()

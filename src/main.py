@@ -1,10 +1,7 @@
-import pandas as pd
 from fastapi import FastAPI, UploadFile, File,  Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import List
 from fastapi.encoders import jsonable_encoder
-import sklearn
-import numpy as np
 from fastapi.responses import StreamingResponse
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
